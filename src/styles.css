@@ -441,3 +441,44 @@ button {
     border-radius: 20px;
   }
 }
+
+/* 2026-05-15 UI adjustment: make definitions readable but not oversized, and shrink action buttons. */
+.word-meaning {
+  font-size: 22px;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+}
+
+.word-meaning strong {
+  font-size: inherit;
+  font-weight: 760;
+}
+
+.danger-button {
+  font-size: 14px;
+  padding: 7px 12px;
+  border-radius: 12px;
+  line-height: 1.2;
+  min-height: auto;
+}
+
+.small-button {
+  font-size: 14px;
+  padding: 7px 12px;
+  border-radius: 12px;
+  line-height: 1.2;
+  min-height: auto;
+}
+
+@media (max-width: 760px) {
+  .word-meaning {
+    font-size: 20px;
+    line-height: 1.45;
+  }
+
+  .danger-button,
+  .small-button {
+    font-size: 14px;
+    padding: 7px 11px;
+  }
+}
