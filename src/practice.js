@@ -1,14 +1,17 @@
 import { saveMatchingReview } from './api.js'
 import { statusByMastery } from './constants.js'
 import { setMessage, state } from './state.js'
-import { getMastery, shuffle } from './utils.js'
+import { getMastery, normaliseTags, shuffle } from './utils.js'
 
-export function createPracticeSession(courseId, count) {
+export function createPracticeSession(courseId, count, tag = 'all') {
   const courseWords = state.words.filter(word => courseId === 'all' || String(word.course_id) === String(courseId))
-  const usable = courseWords.filter(word => word.word && word.meaning_en)
+  const taggedWords = tag === 'all'
+    ? courseWords
+    : courseWords.filter(word => normaliseTags(word.tags).some(item => String(item) === String(tag)))
+  const usable = taggedWords.filter(word => word.word && word.meaning_en)
 
   if (usable.length < 6) {
-    setMessage('英文解释配对需要当前课程至少有 6 个带英文解释的单词。系统不会混入其他课程。', 'error')
+    setMessage('当前筛选范围至少需要 6 个带英文解释的单词。请换一个课程或标签。', 'error')
     return false
   }
 
@@ -16,6 +19,7 @@ export function createPracticeSession(courseId, count) {
   state.message = null
   state.practice = {
     courseId,
+    tag,
     index: 0,
     questions: selected.map(word => ({
       word,

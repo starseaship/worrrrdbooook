@@ -9,6 +9,10 @@ export const state = {
     mastery: 'all',
     search: ''
   },
+  practiceFilters: {
+    courseId: 'all',
+    tag: 'all'
+  },
   editingWordId: null,
   message: null,
   practice: null

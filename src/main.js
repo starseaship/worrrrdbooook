@@ -181,6 +181,17 @@ function bindTabEvents() {
     })
   })
 
+  document.querySelectorAll('[data-practice-filter]').forEach(input => {
+    input.addEventListener('change', () => {
+      state.practiceFilters[input.dataset.practiceFilter] = input.value
+      if (input.dataset.practiceFilter === 'courseId') {
+        state.practiceFilters.tag = 'all'
+      }
+      state.practice = null
+      render()
+    })
+  })
+
   document.querySelectorAll('[data-action="go-add"]').forEach(button => {
     button.addEventListener('click', () => {
       state.editingWordId = null
@@ -238,9 +249,10 @@ function bindTabEvents() {
   document.querySelectorAll('[data-action="restart-practice"]').forEach(button => {
     button.addEventListener('click', () => {
       const courseId = state.practice.courseId
+      const tag = state.practice.tag || 'all'
       const count = state.practice.questions.length
       state.practice = null
-      createPracticeSession(courseId, count)
+      createPracticeSession(courseId, count, tag)
       render()
     })
   })
@@ -374,8 +386,9 @@ function startPractice(event) {
   event.preventDefault()
   const formData = new FormData(event.target)
   const courseId = formData.get('course_id') || 'all'
+  const tag = formData.get('tag') || 'all'
   const count = Number(formData.get('count') || 10)
-  createPracticeSession(courseId, count)
+  createPracticeSession(courseId, count, tag)
   render()
 }
 

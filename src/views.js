@@ -286,7 +286,7 @@ export function renderMatchingPractice() {
         <div class="form-grid two">
           <div class="field">
             <label>课程范围</label>
-            <select name="course_id">${renderCourseOptions('all', true)}</select>
+            <select name="course_id" data-practice-filter="courseId">${renderCourseOptions(state.practiceFilters.courseId, true)}</select>
           </div>
           <div class="field">
             <label>题目数量</label>
@@ -298,7 +298,8 @@ export function renderMatchingPractice() {
             </select>
           </div>
         </div>
-        <p class="help-text">六选一练习需要当前课程至少有 6 个带英文解释的单词。选项不会混入其他课程。</p>
+        ${renderPracticeTagFilter()}
+        <p class="help-text">六选一练习需要当前筛选范围至少有 6 个带英文解释的单词。选择课程后可以再按标签或章节筛选。</p>
         <button class="primary-button" type="submit">开始练习</button>
       </form>
     </section>
@@ -323,6 +324,25 @@ export function renderStats() {
         ${state.courses.map(course => renderCourseStats(course)).join('') || '<div class="empty">还没有课程。</div>'}
       </div>
     </section>
+  `
+}
+
+function renderPracticeTagFilter() {
+  if (state.practiceFilters.courseId === 'all') return ''
+
+  const tags = getTagsForCourse(state.practiceFilters.courseId)
+  if (!tags.length) {
+    return '<p class="help-text">当前课程还没有可筛选的标签。</p>'
+  }
+
+  return `
+    <div class="field">
+      <label>标签 / 章节</label>
+      <select name="tag" data-practice-filter="tag">
+        <option value="all" ${state.practiceFilters.tag === 'all' ? 'selected' : ''}>全部标签</option>
+        ${tags.map(tag => `<option value="${escapeAttr(tag)}" ${String(tag) === String(state.practiceFilters.tag) ? 'selected' : ''}>${escapeHtml(tag)}</option>`).join('')}
+      </select>
+    </div>
   `
 }
 
@@ -357,7 +377,7 @@ function renderPracticeSession() {
 
   return `
     <section class="card">
-      <div class="word-meta">${practice.index + 1} / ${practice.questions.length} · ${escapeHtml(getCourseName(current.word.course_id))}</div>
+      <div class="word-meta">${practice.index + 1} / ${practice.questions.length} · ${escapeHtml(getCourseName(current.word.course_id))}${practice.tag && practice.tag !== 'all' ? ` · ${escapeHtml(practice.tag)}` : ''}</div>
       <h2 class="card-title">选择正确的单词</h2>
       <p class="practice-question">${escapeHtml(current.word.meaning_en || '')}</p>
       ${practice.lastResult ? '' : `
@@ -416,6 +436,16 @@ function getFilteredWords() {
     const matchesSearch = !search || haystack.includes(search)
     return matchesCourse && matchesMastery && matchesSearch
   })
+}
+
+function getTagsForCourse(courseId) {
+  const tags = new Set()
+  state.words
+    .filter(word => String(word.course_id) === String(courseId))
+    .forEach(word => {
+      normaliseTags(word.tags).forEach(tag => tags.add(tag))
+    })
+  return [...tags].sort((a, b) => String(a).localeCompare(String(b)))
 }
 
 export function renderCourseOptions(selectedId = 'all', includeAll = false) {
