@@ -7,7 +7,6 @@ const tabs = [
   { id: 'words', label: '单词表' },
   { id: 'add', label: '录入单词' },
   { id: 'courses', label: '课程管理' },
-  { id: 'spelling', label: '例句拼写' },
   { id: 'matching', label: '解释配对' },
   { id: 'stats', label: '学习统计' }
 ]
@@ -64,7 +63,7 @@ function renderShell() {
       <header class="app-header">
         <div>
           <h1 class="app-title">Light Vocabulary Book</h1>
-          <p class="app-subtitle">按课程整理单词，用例句拼写和英文解释配对练习。</p>
+          <p class="app-subtitle">按课程整理单词，用英文解释配对练习。</p>
         </div>
         <div class="user-panel" id="userPanel"></div>
       </header>
@@ -96,9 +95,12 @@ function render() {
     words: renderWords,
     add: renderWordForm,
     courses: renderCourses,
-    spelling: () => renderPractice('spelling'),
-    matching: () => renderPractice('matching'),
+    matching: renderMatchingPractice,
     stats: renderStats
+  }
+
+  if (!renderers[state.activeTab]) {
+    state.activeTab = 'words'
   }
 
   document.querySelector('#content').innerHTML = renderers[state.activeTab]()
@@ -179,7 +181,7 @@ function renderLogin() {
       </section>
       <section class="card soft">
         <h2 class="card-title">第一次使用</h2>
-        <p class="help-text">先注册一次账号。建议在 Supabase 的 Email 设置里关闭 Confirm email，这样注册后可以直接登录。</p>
+        <p class="help-text">先注册一次账号。若 Supabase 仍开启邮箱确认，请先确认邮箱后再登录。</p>
         <form id="signupForm" class="form-grid">
           <div class="field">
             <label for="signupEmail">邮箱</label>
@@ -249,15 +251,15 @@ function renderWordCard(word) {
       ${tags.length ? `<div class="tag-row">${tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
       ${word.note ? `<p class="help-text">备注：${escapeHtml(word.note)}</p>` : ''}
       <div class="button-row" style="margin-top: 12px;">
-        <button class="small-button" data-action="edit-word" data-id="${word.id}">编辑</button>
-        <button class="danger-button" data-action="delete-word" data-id="${word.id}">删除</button>
+        <button class="small-button" data-action="edit-word" data-id="${escapeAttr(word.id)}">编辑</button>
+        <button class="danger-button" data-action="delete-word" data-id="${escapeAttr(word.id)}">删除</button>
       </div>
     </article>
   `
 }
 
 function renderWordForm() {
-  const editing = state.editingWordId ? state.words.find(word => word.id === state.editingWordId) : null
+  const editing = state.editingWordId ? state.words.find(word => String(word.id) === String(state.editingWordId)) : null
   return `
     <section class="card">
       <h2 class="card-title">${editing ? '编辑单词' : '录入单词'}</h2>
@@ -351,7 +353,7 @@ function renderCourses() {
                     <h3 class="word-title">${escapeHtml(course.name)}</h3>
                     <div class="word-meta">${countWordsByCourse(course.id)} 个单词</div>
                   </div>
-                  <button class="danger-button" data-action="delete-course" data-id="${course.id}">删除</button>
+                  <button class="danger-button" data-action="delete-course" data-id="${escapeAttr(course.id)}">删除</button>
                 </div>
                 ${course.description ? `<p class="help-text">${escapeHtml(course.description)}</p>` : ''}
               </article>
@@ -363,16 +365,13 @@ function renderCourses() {
   `
 }
 
-function renderPractice(mode) {
-  const title = mode === 'spelling' ? '例句拼写练习' : '英文解释配对练习'
-  if (state.practice?.mode === mode) {
-    return renderPracticeSession()
-  }
+function renderMatchingPractice() {
+  if (state.practice) return renderPracticeSession()
 
   return `
     <section class="card">
-      <h2 class="card-title">${title}</h2>
-      <form id="practiceSetup" class="form-grid" data-mode="${mode}">
+      <h2 class="card-title">英文解释配对练习</h2>
+      <form id="practiceSetup" class="form-grid">
         <div class="form-grid two">
           <div class="field">
             <label>课程范围</label>
@@ -388,7 +387,7 @@ function renderPractice(mode) {
             </select>
           </div>
         </div>
-        ${mode === 'matching' ? '<p class="help-text">六选一练习需要当前课程至少有 6 个带英文解释的单词。选项不会混入其他课程。</p>' : '<p class="help-text">系统会优先使用英文例句挖空目标单词。大小写和前后空格不影响判定。</p>'}
+        <p class="help-text">六选一练习需要当前课程至少有 6 个带英文解释的单词。选项不会混入其他课程。</p>
         <button class="primary-button" type="submit">开始练习</button>
       </form>
     </section>
@@ -424,27 +423,6 @@ function renderPracticeSession() {
     `
   }
 
-  if (practice.mode === 'spelling') {
-    return `
-      <section class="card">
-        <div class="word-meta">${practice.index + 1} / ${practice.questions.length} · ${escapeHtml(getCourseName(current.course_id))}</div>
-        <h2 class="card-title">根据例句拼写单词</h2>
-        <p class="practice-question">${renderBlankSentence(current)}</p>
-        <p class="help-text">中文：${escapeHtml(current.meaning_zh || '未填写')}</p>
-        ${practice.lastResult ? '' : `
-          <form id="spellingAnswer" class="form-grid">
-            <div class="field">
-              <label>你的答案</label>
-              <input name="answer" autocomplete="off" autofocus />
-            </div>
-            <button class="primary-button" type="submit">提交答案</button>
-          </form>
-        `}
-        ${practice.lastResult ? renderLastResult(practice.lastResult) : ''}
-      </section>
-    `
-  }
-
   return `
     <section class="card">
       <div class="word-meta">${practice.index + 1} / ${practice.questions.length} · ${escapeHtml(getCourseName(current.word.course_id))}</div>
@@ -452,7 +430,7 @@ function renderPracticeSession() {
       <p class="practice-question">${escapeHtml(current.word.meaning_en || '')}</p>
       ${practice.lastResult ? '' : `
         <div class="option-grid">
-          ${current.options.map(option => `<button class="option-button" data-action="choose-option" data-id="${option.id}">${escapeHtml(option.word)}</button>`).join('')}
+          ${current.options.map(option => `<button class="option-button" data-action="choose-option" data-id="${escapeAttr(option.id)}">${escapeHtml(option.word)}</button>`).join('')}
         </div>
       `}
       ${practice.lastResult ? renderLastResult(practice.lastResult) : ''}
@@ -495,8 +473,8 @@ function renderStats() {
 }
 
 function renderCourseStats(course) {
-  const words = state.words.filter(word => word.course_id === course.id)
-  const reviews = state.reviews.filter(review => review.course_id === course.id)
+  const words = state.words.filter(word => String(word.course_id) === String(course.id))
+  const reviews = state.reviews.filter(review => String(review.course_id) === String(course.id))
   const mastered = words.filter(word => getMastery(word) === 3).length
   const learning = words.filter(word => getMastery(word) === 1 || getMastery(word) === 2).length
   const correct = reviews.filter(review => review.is_correct).length
@@ -560,10 +538,7 @@ function bindLoginEvents() {
         return
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
 
       if (error) {
         setMessage(error.message, 'error')
@@ -588,10 +563,7 @@ function bindLoginEvents() {
         return
       }
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password
-      })
+      const { data, error } = await supabase.auth.signUp({ email, password })
 
       if (error) {
         setMessage(error.message, 'error')
@@ -628,24 +600,13 @@ function bindTabEvents() {
   })
 
   const wordForm = document.querySelector('#wordForm')
-  if (wordForm) {
-    wordForm.addEventListener('submit', saveWord)
-  }
+  if (wordForm) wordForm.addEventListener('submit', saveWord)
 
   const courseForm = document.querySelector('#courseForm')
-  if (courseForm) {
-    courseForm.addEventListener('submit', saveCourse)
-  }
+  if (courseForm) courseForm.addEventListener('submit', saveCourse)
 
   const practiceSetup = document.querySelector('#practiceSetup')
-  if (practiceSetup) {
-    practiceSetup.addEventListener('submit', startPractice)
-  }
-
-  const spellingAnswer = document.querySelector('#spellingAnswer')
-  if (spellingAnswer) {
-    spellingAnswer.addEventListener('submit', submitSpellingAnswer)
-  }
+  if (practiceSetup) practiceSetup.addEventListener('submit', startPractice)
 
   document.querySelectorAll('[data-action="edit-word"]').forEach(button => {
     button.addEventListener('click', () => {
@@ -680,11 +641,10 @@ function bindTabEvents() {
 
   document.querySelectorAll('[data-action="restart-practice"]').forEach(button => {
     button.addEventListener('click', () => {
-      const mode = state.practice.mode
       const courseId = state.practice.courseId
       const count = state.practice.questions.length
       state.practice = null
-      createPracticeSession(mode, courseId, count)
+      createPracticeSession(courseId, count)
       render()
     })
   })
@@ -699,16 +659,19 @@ function bindTabEvents() {
 
 async function loadAll() {
   if (!state.session || !supabase) return
+  const userId = state.session.user.id
 
   const [coursesResult, wordsResult, reviewsResult] = await Promise.all([
-    supabase.from('courses').select('*').order('name'),
-    supabase.from('vocabulary_items').select('*').order('created_at', { ascending: false }),
-    supabase.from('vocabulary_reviews').select('*').order('reviewed_at', { ascending: false }).limit(500)
+    supabase.from('courses').select('*').eq('user_id', userId).order('name'),
+    supabase.from('vocabulary_items').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+    supabase.from('vocabulary_reviews').select('*').eq('user_id', userId).order('reviewed_at', { ascending: false }).limit(500)
   ])
 
-  if (coursesResult.error) setMessage(coursesResult.error.message, 'error')
-  if (wordsResult.error) setMessage(wordsResult.error.message, 'error')
-  if (reviewsResult.error) setMessage(reviewsResult.error.message, 'error')
+  const errors = [coursesResult.error, wordsResult.error, reviewsResult.error]
+    .map(error => error?.message)
+    .filter(Boolean)
+
+  if (errors.length) setMessage(errors.join('；'), 'error')
 
   state.courses = coursesResult.data || []
   state.words = wordsResult.data || []
@@ -718,9 +681,17 @@ async function loadAll() {
 async function saveCourse(event) {
   event.preventDefault()
   const formData = new FormData(event.target)
+  const name = formData.get('name')?.trim()
+
+  if (!name) {
+    setMessage('请输入课程名称。', 'error')
+    render()
+    return
+  }
+
   const payload = {
     user_id: state.session.user.id,
-    name: formData.get('name')?.trim(),
+    name,
     description: formData.get('description')?.trim() || null
   }
 
@@ -744,7 +715,12 @@ async function deleteCourse(id) {
   }
 
   if (!window.confirm('确定要删除这个课程吗？')) return
-  const { error } = await supabase.from('courses').delete().eq('id', id)
+  const { error } = await supabase
+    .from('courses')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', state.session.user.id)
+
   if (error) {
     setMessage(error.message, 'error')
   } else {
@@ -757,12 +733,21 @@ async function deleteCourse(id) {
 async function saveWord(event) {
   event.preventDefault()
   const formData = new FormData(event.target)
-  const mastery = Number(formData.get('mastery_level') || 0)
+  const mastery = clampMastery(Number(formData.get('mastery_level') || 0))
+  const word = formData.get('word')?.trim()
+  const courseId = formData.get('course_id')
+
+  if (!word || !courseId) {
+    setMessage('请选择课程并填写英文单词。', 'error')
+    render()
+    return
+  }
+
   const payload = {
     user_id: state.session.user.id,
     exam_category: 'TOEIC',
-    course_id: formData.get('course_id'),
-    word: formData.get('word')?.trim(),
+    course_id: courseId,
+    word,
     meaning_zh: formData.get('meaning_zh')?.trim() || null,
     meaning_en: formData.get('meaning_en')?.trim() || null,
     part_of_speech: formData.get('part_of_speech')?.trim() || null,
@@ -777,7 +762,11 @@ async function saveWord(event) {
 
   let result
   if (state.editingWordId) {
-    result = await supabase.from('vocabulary_items').update(payload).eq('id', state.editingWordId)
+    result = await supabase
+      .from('vocabulary_items')
+      .update(payload)
+      .eq('id', state.editingWordId)
+      .eq('user_id', state.session.user.id)
   } else {
     result = await supabase.from('vocabulary_items').insert(payload)
   }
@@ -795,7 +784,12 @@ async function saveWord(event) {
 
 async function deleteWord(id) {
   if (!window.confirm('确定要删除这个单词吗？')) return
-  const { error } = await supabase.from('vocabulary_items').delete().eq('id', id)
+  const { error } = await supabase
+    .from('vocabulary_items')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', state.session.user.id)
+
   if (error) {
     setMessage(error.message, 'error')
   } else {
@@ -808,36 +802,16 @@ async function deleteWord(id) {
 function startPractice(event) {
   event.preventDefault()
   const formData = new FormData(event.target)
-  const mode = event.target.dataset.mode
   const courseId = formData.get('course_id') || 'all'
   const count = Number(formData.get('count') || 10)
-  createPracticeSession(mode, courseId, count)
+  createPracticeSession(courseId, count)
   render()
 }
 
-function createPracticeSession(mode, courseId, count) {
-  const courseWords = state.words.filter(word => courseId === 'all' || word.course_id === courseId)
-
-  if (mode === 'spelling') {
-    const usable = courseWords.filter(word => word.word)
-    if (!usable.length) {
-      setMessage('当前课程范围内还没有可练习的单词。', 'error')
-      return
-    }
-    state.message = null
-    state.practice = {
-      mode,
-      courseId,
-      index: 0,
-      questions: shuffle(usable).slice(0, count),
-      answers: [],
-      lastResult: null,
-      finished: false
-    }
-    return
-  }
-
+function createPracticeSession(courseId, count) {
+  const courseWords = state.words.filter(word => courseId === 'all' || String(word.course_id) === String(courseId))
   const usable = courseWords.filter(word => word.word && word.meaning_en)
+
   if (usable.length < 6) {
     setMessage('英文解释配对需要当前课程至少有 6 个带英文解释的单词。系统不会混入其他课程。', 'error')
     return
@@ -846,12 +820,11 @@ function createPracticeSession(mode, courseId, count) {
   const selected = shuffle(usable).slice(0, Math.min(count, usable.length))
   state.message = null
   state.practice = {
-    mode,
     courseId,
     index: 0,
     questions: selected.map(word => ({
       word,
-      options: shuffle([word, ...shuffle(usable.filter(item => item.id !== word.id)).slice(0, 5)])
+      options: shuffle([word, ...shuffle(usable.filter(item => String(item.id) !== String(word.id))).slice(0, 5)])
     })),
     answers: [],
     lastResult: null,
@@ -859,22 +832,14 @@ function createPracticeSession(mode, courseId, count) {
   }
 }
 
-async function submitSpellingAnswer(event) {
-  event.preventDefault()
-  const answer = new FormData(event.target).get('answer')?.trim() || ''
-  const word = state.practice.questions[state.practice.index]
-  const isCorrect = normaliseAnswer(answer) === normaliseAnswer(word.word)
-  await recordAnswer({ word, mode: 'spelling', userAnswer: answer, isCorrect })
-}
-
 async function submitMatchingAnswer(selectedId) {
   const question = state.practice.questions[state.practice.index]
-  const selected = question.options.find(option => option.id === selectedId)
-  const isCorrect = selectedId === question.word.id
-  await recordAnswer({ word: question.word, mode: 'matching', userAnswer: selected?.word || '', isCorrect })
+  const selected = question.options.find(option => String(option.id) === String(selectedId))
+  const isCorrect = String(selectedId) === String(question.word.id)
+  await recordAnswer({ word: question.word, userAnswer: selected?.word || '', isCorrect })
 }
 
-async function recordAnswer({ word, mode, userAnswer, isCorrect }) {
+async function recordAnswer({ word, userAnswer, isCorrect }) {
   const currentMastery = getMastery(word)
   const newMastery = isCorrect ? Math.min(currentMastery + 1, 3) : Math.max(currentMastery - 1, 0)
   const now = new Date().toISOString()
@@ -883,7 +848,7 @@ async function recordAnswer({ word, mode, userAnswer, isCorrect }) {
     user_id: state.session.user.id,
     vocabulary_id: word.id,
     course_id: word.course_id,
-    mode,
+    mode: 'matching',
     user_answer: userAnswer,
     correct_answer: word.word,
     is_correct: isCorrect,
@@ -900,7 +865,11 @@ async function recordAnswer({ word, mode, userAnswer, isCorrect }) {
 
   const [reviewResult, updateResult] = await Promise.all([
     supabase.from('vocabulary_reviews').insert(reviewPayload),
-    supabase.from('vocabulary_items').update(updatePayload).eq('id', word.id)
+    supabase
+      .from('vocabulary_items')
+      .update(updatePayload)
+      .eq('id', word.id)
+      .eq('user_id', state.session.user.id)
   ])
 
   if (reviewResult.error || updateResult.error) {
@@ -912,8 +881,7 @@ async function recordAnswer({ word, mode, userAnswer, isCorrect }) {
   const updatedWord = { ...word, ...updatePayload }
   state.practice.answers.push({ word: updatedWord, userAnswer, isCorrect })
   state.practice.lastResult = { word: updatedWord, userAnswer, isCorrect }
-
-  state.words = state.words.map(item => item.id === word.id ? updatedWord : item)
+  state.words = state.words.map(item => String(item.id) === String(word.id) ? updatedWord : item)
   state.reviews.unshift(reviewPayload)
   render()
 }
@@ -932,24 +900,27 @@ function nextQuestion() {
 function getFilteredWords() {
   const search = state.filters.search.trim().toLowerCase()
   return state.words.filter(word => {
-    const matchesCourse = state.filters.courseId === 'all' || word.course_id === state.filters.courseId
+    const matchesCourse = state.filters.courseId === 'all' || String(word.course_id) === String(state.filters.courseId)
     const matchesMastery = state.filters.mastery === 'all' || String(getMastery(word)) === state.filters.mastery
-    const haystack = [word.word, word.meaning_zh, word.meaning_en, word.ai_example_sentence, word.example_translation, word.note, ...normaliseTags(word.tags)].join(' ').toLowerCase()
+    const haystack = [word.word, word.meaning_zh, word.meaning_en, word.ai_example_sentence, word.example_translation, word.note, ...normaliseTags(word.tags)]
+      .join(' ')
+      .toLowerCase()
     const matchesSearch = !search || haystack.includes(search)
     return matchesCourse && matchesMastery && matchesSearch
   })
 }
 
 function renderCourseOptions(selectedId = 'all', includeAll = false) {
-  return `${includeAll ? `<option value="all" ${selectedId === 'all' ? 'selected' : ''}>全部课程</option>` : ''}${state.courses.map(course => `<option value="${course.id}" ${course.id === selectedId ? 'selected' : ''}>${escapeHtml(course.name)}</option>`).join('')}`
+  const allOption = includeAll ? `<option value="all" ${selectedId === 'all' ? 'selected' : ''}>全部课程</option>` : ''
+  return `${allOption}${state.courses.map(course => `<option value="${escapeAttr(course.id)}" ${String(course.id) === String(selectedId) ? 'selected' : ''}>${escapeHtml(course.name)}</option>`).join('')}`
 }
 
 function getCourseName(courseId) {
-  return state.courses.find(course => course.id === courseId)?.name || '未分类'
+  return state.courses.find(course => String(course.id) === String(courseId))?.name || '未分类'
 }
 
 function countWordsByCourse(courseId) {
-  return state.words.filter(word => word.course_id === courseId).length
+  return state.words.filter(word => String(word.course_id) === String(courseId)).length
 }
 
 function getMastery(word) {
@@ -961,15 +932,9 @@ function getMastery(word) {
   return 0
 }
 
-function renderBlankSentence(word) {
-  const sentence = word.ai_example_sentence || `${word.meaning_zh || word.meaning_en || '这个单词'}：${word.word}`
-  const escapedSentence = escapeHtml(sentence)
-  const escapedWord = escapeRegExp(word.word)
-  const regex = new RegExp(escapedWord, 'i')
-  if (regex.test(escapedSentence)) {
-    return escapedSentence.replace(regex, '<span class="blank">blank</span>')
-  }
-  return `${escapedSentence}<br><span class="blank">blank</span>`
+function clampMastery(value) {
+  if (!Number.isFinite(value)) return 0
+  return Math.min(Math.max(Math.round(value), 0), 3)
 }
 
 function parseTags(value) {
@@ -982,10 +947,6 @@ function normaliseTags(tags) {
   if (Array.isArray(tags)) return tags.filter(Boolean)
   if (typeof tags === 'string') return parseTags(tags)
   return []
-}
-
-function normaliseAnswer(value) {
-  return String(value || '').trim().toLowerCase()
 }
 
 function shuffle(items) {
@@ -1012,8 +973,4 @@ function escapeHtml(value) {
 
 function escapeAttr(value) {
   return escapeHtml(value).replaceAll('`', '&#096;')
-}
-
-function escapeRegExp(value) {
-  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
