@@ -41,6 +41,7 @@ export function updateWordById(id, userId, payload) {
     .update(payload)
     .eq('id', id)
     .eq('user_id', userId)
+    .select('id')
 }
 
 export function deleteWordById(id, userId) {
