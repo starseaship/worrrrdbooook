@@ -16,16 +16,16 @@ export function renderWords() {
 
   return `
     <section class="card">
-      <div class="toolbar">
-        <div class="field">
+      <div class="toolbar compact-toolbar">
+        <div class="field search-field">
           <label>搜索</label>
           <input data-filter="search" value="${escapeAttr(state.filters.search)}" placeholder="输入单词、中文、英文解释或例句" />
         </div>
-        <div class="field">
+        <div class="field filter-field">
           <label>课程</label>
           <select data-filter="courseId">${renderCourseOptions(state.filters.courseId, true)}</select>
         </div>
-        <div class="field">
+        <div class="field filter-field">
           <label>掌握程度</label>
           <select data-filter="mastery">
             <option value="all" ${state.filters.mastery === 'all' ? 'selected' : ''}>全部</option>
@@ -33,7 +33,7 @@ export function renderWords() {
           </select>
         </div>
       </div>
-      <div class="button-row" style="margin-bottom: 14px;">
+      <div class="button-row word-actions">
         <button class="primary-button" data-action="go-add">新增单词</button>
         <button class="secondary-button" data-action="reload">刷新数据</button>
       </div>
@@ -78,7 +78,7 @@ function renderWordCard(word) {
 
 function renderWordPagination(currentPage, pageCount, total) {
   if (pageCount <= 1) {
-    return `<p class="help-text" style="margin-top: 12px;">共 ${total} 个单词。</p>`
+    return `<p class="help-text word-count">共 ${total} 个单词。</p>`
   }
 
   const options = Array.from({ length: pageCount }, (_item, index) => {
@@ -87,9 +87,13 @@ function renderWordPagination(currentPage, pageCount, total) {
   }).join('')
 
   return `
-    <div class="field" style="margin-top: 14px;">
-      <label>共 ${total} 个单词，每页 ${WORDS_PER_PAGE} 个</label>
-      <select data-filter="page">${options}</select>
+    <div class="pagination-bar">
+      <button class="secondary-button page-button" data-action="prev-word-page" ${currentPage === 1 ? 'disabled' : ''}>上一页</button>
+      <div class="field page-select-field">
+        <label>共 ${total} 个单词 · 每页 ${WORDS_PER_PAGE} 个</label>
+        <select data-filter="page">${options}</select>
+      </div>
+      <button class="secondary-button page-button" data-action="next-word-page" ${currentPage === pageCount ? 'disabled' : ''}>下一页</button>
     </div>
   `
 }
