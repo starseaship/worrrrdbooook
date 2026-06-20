@@ -171,28 +171,12 @@ function bindLoginEvents() {
 
 function bindTabEvents() {
   document.querySelectorAll('[data-filter]').forEach(input => {
-    const updateFilter = () => {
+    input.addEventListener('input', () => {
       state.filters[input.dataset.filter] = input.value
-      if (input.dataset.filter !== 'page') {
-        state.filters.page = '1'
-      }
-      render()
-    }
-
-    input.addEventListener('input', updateFilter)
-    input.addEventListener('change', updateFilter)
-  })
-
-  document.querySelectorAll('[data-action="prev-word-page"]').forEach(button => {
-    button.addEventListener('click', () => {
-      state.filters.page = String(Math.max(1, Number(state.filters.page || 1) - 1))
       render()
     })
-  })
-
-  document.querySelectorAll('[data-action="next-word-page"]').forEach(button => {
-    button.addEventListener('click', () => {
-      state.filters.page = String(Number(state.filters.page || 1) + 1)
+    input.addEventListener('change', () => {
+      state.filters[input.dataset.filter] = input.value
       render()
     })
   })

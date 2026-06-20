@@ -1,0 +1,16 @@
+{
+  "name": "Light Vocabulary Book",
+  "short_name": "Word Book",
+  "start_url": "/worrrrdbooook/",
+  "scope": "/worrrrdbooook/",
+  "display": "standalone",
+  "background_color": "#080724",
+  "theme_color": "#080724",
+  "icons": [
+    {
+      "src": "./apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
