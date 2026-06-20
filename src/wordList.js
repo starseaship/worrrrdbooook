@@ -70,7 +70,7 @@ function renderWordCard(word) {
       ${word.note ? `<p class="help-text">备注：${escapeHtml(word.note)}</p>` : ''}
       <div class="button-row" style="margin-top: 12px;">
         <button class="small-button" data-action="edit-word" data-id="${escapeAttr(word.id)}">编辑</button>
-        <button class="danger-button" data-action="delete-word" data-id="${escapeAttr(word.id)}">删除</button>
+        <button class="danger-button" style="font-size:13px; padding:7px 12px; border-radius:999px;" data-action="delete-word" data-id="${escapeAttr(word.id)}">删除</button>
       </div>
     </details>
   `
